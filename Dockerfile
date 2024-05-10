@@ -58,6 +58,7 @@ RUN git clone https://github.com/CiscoDevNet/iPSK-Manager.git && chown www-data:
 
 WORKDIR /
 RUN sed -i 's/^bind-address/#&/' /etc/mysql/mysql.conf.d/mysqld.cnf && \
+    sed -i 's|ErrorLog \${APACHE_LOG_DIR}/error.log|ErrorLog /dev/stderr|' /etc/apache2/apache2.conf && \
     echo 'default_authentication_plugin=mysql_native_password' >> /etc/mysql/mysql.conf.d/mysqld.cnf && \
     mkdir /opt/ipsk-manager && \
     chown www-data:www-data /opt/ipsk-manager && \
