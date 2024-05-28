@@ -94,9 +94,9 @@ RUN sed -i 's/^bind-address/#&/' /etc/mysql/mysql.conf.d/mysqld.cnf && \
     chmod 744 run.sh && \
     echo "#!/bin/sh" >> run.sh && \
     echo "if [ \"$MYSQL_ENABLE\" = true ] ; then service mysql start ; fi" >> run.sh && \
-    echo "if [ \"$SSO_ENABLE\" = true ] ; then service shibd start ; fi" >> run.sh && \
     echo "./init.sh" >> run.sh && \
     echo "sed -i '/.\/init.sh/{N;d;}' ./run.sh && rm ./init.sh && rm /tmp/mysql-start.sql" >> run.sh && \
+    echo "if [ \"$SSO_ENABLE\" = true ] ; then service shibd start ; fi" >> run.sh && \
     echo "apachectl -D FOREGROUND" >> run.sh
 
 EXPOSE 8443 443 3306
