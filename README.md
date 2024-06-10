@@ -139,7 +139,37 @@ docker run -d --name ipskmanager --mount source=mysqldata,destination=/var/lib/m
 
 For new installations of iPSK Manager within a Docker container, follow the initial build and run steps outlined below. For subsequent container runs, the system will automatically load the persistent state from the mounted volumes. To upgrade iPSK Manager, execute the build process again to pull updates from the GitHub repository and then start the container using the same syntax as before. Upon starting the upgraded container, access the Admin Portal URL where iPSK Manager will detect the existing configuration, migrate the necessary state files, and present you with a login screen, indicating that the upgrade is complete and iPSK Manager is ready for use.
 
-### New iPSK Manager Installation within Container
+## Optional Docker Static IP Configuration
+
+Sometimes, you may want to assign a specific IP address to a Docker container. To achieve this, you can create a network and then assign it to the container using the `docker run` command. Below is an example of how to assign a static IP address to the iPSK Manager Docker container.
+
+Create a network 
+
+```
+docker network create -d ipvlan \
+  --subnet=192.168.100.0/24 \
+  --gateway=192.168.100.1 \
+  -o parent=eth0.100 \
+  ipsk-manager-network
+```
+
+Breaking down this command:
+-	**-d ipvlan** Specifies the ipvlan driver.
+-	**--subnet=192.168.100.0/24** Defines the subnet for the network.
+-	**--gateway=192.168.100.1** Defines the gateway for the subnet.
+-	**-o parent=eth0.100** Specifies the parent interface, and the VLAN interface if you created one, otherwise leave VLAN off.
+-	**ipsk-manager-network** The name of the new network.
+
+Running iPSK Manager Docker image with defined network
+
+```
+docker run -d --name ipskmanager --mount source=mysqldata,destination=/var/lib/mysql \
+--mount source=ipskconfig,destination=/opt/ipsk-manager \
+--network ipsk-manager-network -p 80:80/tcp -p 443:443/tcp \
+-p 8443:8443/tcp -p 3306:3306/tcp ipskmanager-image
+```
+
+## New iPSK Manager Installation within Container
 
 If you are running the iPSK Manager container for the first time and iPSK Manager has not been installed previously, you will need to complete the iPSK Manager installation process via the web-based installer. Here's what you need to do:
 1.	Open a web browser and navigate to the URL of the admin dashboard for iPSK Manager, which by default is set to use port 8443. Replace \<ipsk-manager-url\> with the actual URL or IP address of your Docker host:
