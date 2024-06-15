@@ -199,3 +199,17 @@ After the installation is completed it is recommended to delete the MySQL instal
 ```
 docker exec ipskmanager /removeinstalluser.sh
 ```
+
+## Database Schema Updates (When Required)
+Sometimes schema changes may be included in an update of iPSK Manager. After logging into the admin portal, if you are presented with a database schema update required message, follow the steps below to process the schema update for the particular schema version you need to apply. Remember, schema version changes are not cumulative.
+
+### Schema Update v4
+1. Run command below to change contents of the schemaupdate-v4.sql file to point to the iPSK Manager database used on the Docker Container.
+```sh
+docker exec -it ipskmanager sed -i 's/USE `<ISE_DB_NAME>`;/USE `ipsk`;/g' /var/www/iPSK-Manager/schemaupdate-v4.sql
+```
+2. Run command below to apply schema change to database
+```sh
+docker exec -i ipskmanager sh -c 'mysql -u root < /var/www/iPSK-Manager/schemaupdate-v4.sql'
+```
+
