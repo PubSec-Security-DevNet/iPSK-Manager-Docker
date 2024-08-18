@@ -20,7 +20,6 @@ LABEL version="0.1"
 LABEL description="Containerized iPSK-Manager"
 LABEL maintainer="nciesins@cisco.com"
 
-ARG SQL_PASSWORD=Cisco1234
 ARG SSO_ENABLE=false
 ARG MYSQL_ENABLE=true
 
@@ -39,6 +38,7 @@ RUN apt-get update \
         php-xml \ 
         git-all \
         libapache2-mod-shib \
+        sudo \
     && apt-get clean \
     && apt-get purge \
     && rm -rf /var/lib/apt/lists/* \
@@ -60,6 +60,7 @@ WORKDIR /
 RUN sed -i 's/^bind-address/#&/' /etc/mysql/mysql.conf.d/mysqld.cnf && \
     sed -i 's|ErrorLog \${APACHE_LOG_DIR}/error.log|ErrorLog /dev/stderr|' /etc/apache2/apache2.conf && \
     echo 'default_authentication_plugin=mysql_native_password' >> /etc/mysql/mysql.conf.d/mysqld.cnf && \
+    export SQL_PASSWORD=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 20) && \
     mkdir /opt/ipsk-manager && \
     chown www-data:www-data /opt/ipsk-manager && \
     touch init.sh && \
@@ -71,6 +72,13 @@ RUN sed -i 's/^bind-address/#&/' /etc/mysql/mysql.conf.d/mysqld.cnf && \
 	echo "echo \"GRANT ALL PRIVILEGES ON *.* TO 'install'@'%' WITH GRANT OPTION;\" >> \$TEMP_FILE" >> init.sh && \
 	echo "echo \"FLUSH PRIVILEGES;\" >> \$TEMP_FILE" >> init.sh && \
     echo "/usr/bin/mysql -su root < \${TEMP_FILE}" >> init.sh && \
+    echo "sed -i '/<input type=\"text\" my-field-state=\"required\" class=\"form-control shadow my-form-field\" id=\"dbhostname\" name=\"dbhostname\">/ s/<input /<input value=\"127.0.0.1\" readonly /' /var/www/iPSK-Manager/adminportal/installer.php" >> init.sh && \
+    echo "sed -i '/<input type=\"text\" my-field-state=\"required\" class=\"form-control shadow my-form-field\" id=\"dbusername\" name=\"dbusername\">/ s/<input /<input value=\"ipskdbuser\" readonly /' /var/www/iPSK-Manager/adminportal/installer.php" >> init.sh && \
+    echo "sed -i '/<input type=\"text\" my-field-state=\"required\" class=\"form-control shadow my-form-field\" id=\"iseusername\" name=\"iseusername\">/ s/<input /<input value=\"ipskiseuser\" readonly /' /var/www/iPSK-Manager/adminportal/installer.php" >> init.sh && \
+    echo "sed -i '/<input type=\"text\" my-field-state=\"required\" class=\"form-control shadow my-form-field\" id=\"databasename\" name=\"databasename\">/ s/<input /<input value=\"ipsk\" readonly /' /var/www/iPSK-Manager/adminportal/installer.php" >> init.sh && \
+    echo "sed -i '/<input type=\"text\" class=\"form-control shadow\" id=\"rootusername\" name=\"rootusername\">/ s/<input /<input value=\"install\" readonly /' /var/www/iPSK-Manager/adminportal/installer.php" >> init.sh && \
+    echo "sed -i '/<input type=\"password\" my-field-state=\"required\" class=\"form-control shadow my-form-field\" id=\"rootpassword\" name=\"rootpassword\">/ s/<input /<input value=\"$SQL_PASSWORD\" readonly /' /var/www/iPSK-Manager/adminportal/installer.php" >> init.sh && \
+    echo "sudo sed -i '\$a www-data ALL=(root) NOPASSWD: /removeinstalluser.sh' /etc/sudoers" >> init.sh && \
     echo "fi" >> init.sh && \
     echo "if [ -f \"/etc/shibboleth/sp-cert.pem\" ]; then" >> init.sh && \
     echo "chmod 644 /etc/shibboleth/sp-cert.pem" >> init.sh && \
@@ -82,6 +90,7 @@ RUN sed -i 's/^bind-address/#&/' /etc/mysql/mysql.conf.d/mysqld.cnf && \
     echo "else" >> init.sh && \
     echo "shib-keygen" >> init.sh && \
     echo "fi" >> init.sh && \
+    unset SQL_PASSWORD && \
     touch removeinstalluser.sh && \
     chmod 744 removeinstalluser.sh && \
     echo "#!/bin/sh" >> removeinstalluser.sh && \
@@ -90,6 +99,7 @@ RUN sed -i 's/^bind-address/#&/' /etc/mysql/mysql.conf.d/mysqld.cnf && \
     echo "echo \"FLUSH PRIVILEGES;\" >> \$TEMP_FILE" >> removeinstalluser.sh && \
     echo "/usr/bin/mysql -su root < \${TEMP_FILE}" >> removeinstalluser.sh && \
     echo "rm /tmp/mysql-remove-install.sql" >> removeinstalluser.sh && \
+    echo "sed -i '/www-data ALL=(root) NOPASSWD: \/removeinstalluser.sh/d' /etc/sudoers" >> removeinstalluser.sh && \
     touch run.sh && \
     chmod 744 run.sh && \
     echo "#!/bin/sh" >> run.sh && \

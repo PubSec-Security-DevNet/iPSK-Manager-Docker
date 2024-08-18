@@ -36,8 +36,6 @@ Alternatively, you can also download a zip file from the GitHub repository for t
 
 ## Build arguments
 
-- SQL_PASSWORD=\<password\> 
-    - Password for installation database account (Default: Cisco1234)
 - SSO_ENABLED=\<true/false\>
     - Option to enable or disable Shibboleth SSO process and Apache configuration in container (Default: false)
 - MYSQL_ENABLED=\<true/false\>
@@ -105,15 +103,8 @@ Breaking down this command:
 The build command above will proceed to create the Docker image with the default parameters specified:
 - MySQL will be enabled within the container.
 - Single Sign-On (SSO) will be disabled.
-- The database installation account password will be set to "Cisco1234".
 
 ### Examples of other Docker build commands to change settings
-
-To set the installation MySQL account password to something other then Cisco1234
-
-```
-docker build -t ipskmanager-image . --build-arg SQL_PASSWORD=MyDifferentPassword --no-cache
-```
 
 To set MySQL to not run within the container
 
@@ -121,10 +112,10 @@ To set MySQL to not run within the container
 docker build -t ipskmanager-image . --build-arg MYSQL_ENABLED=false --no-cache
 ```
 
-To set SSO as enabled and change MySQL installation password
+To set SSO as enabled and not run MySQL within the container
 
 ```
-docker build -t ipskmanager-image . --build-arg SSO_ENABLED=true --build-arg SQL_PASSWORD=MyDifferentPassword --no-cache
+docker build -t ipskmanager-image . --build-arg SSO_ENABLED=true --build-arg MYSQL_ENABLED=false --no-cache
 ```
 
 ## Running Docker Image
@@ -181,24 +172,14 @@ https://<ipsk-manager-url>:8443
 
 ![install-image-1](images/ipsk-install-1.png)
 
-3.	For the database configuration:
-    -   If you are using the MySQL server that runs within the container, enter the following information:
-	    -	MySQL Server IP/FQDN: 127.0.0.1 (This points to the localhost inside the container where the MySQL server is running.)
-	    -	MySQL Admin/Root Username: install
-	    -	MySQL Admin/Root Password: Cisco1234 (Or the password you specified with the build argument when building the image.)
-	-	If you are connecting to an external MySQL database, enter the relevant details for your database instance instead.
+3.	If you built the container to use the built-in MySQL server (default), all values on the database configuration screen should be pre-populated and not editable. You can press "Next" to continue the installation process.
 
+    *Note: If you built the container to use an external MySQL server, you will need to fill in all the values on this page as you would for a standalone installation. Refer to the iPSK Manager project README for guidance.*
+	   
 ![install-image-2](images/ipsk-install-2.png)
 
-4.	Fill out the rest of the fields as required for your specific environment and preferences.
-5.	Continue following the installer prompts. The remaining installation process for iPSK Manager is the same as when it is not containerized.
-6.	Once the installation is complete, you should be redirected to the iPSK Manager login screen.
-
-After the installation is completed it is recommended to delete the MySQL install account.  If you choose to delete the install account you can run the following command from your Docker host CLI
-
-```
-docker exec ipskmanager /removeinstalluser.sh
-```
+4.	Continue following the installer prompts. The remaining installation process for iPSK Manager is the same as when it is not containerized.
+5.	Once the installation is complete, you should be redirected to the iPSK Manager login screen.
 
 ## Database Schema Updates (When Required)
 Sometimes schema changes may be included in an update of iPSK Manager. After logging into the admin portal, if you are presented with a database schema update required message, follow the steps below to process the schema update for the particular schema version you need to apply. Remember, schema version changes are not cumulative.
