@@ -36,8 +36,16 @@ Alternatively, you can also download a zip file from the GitHub repository for t
 
 ## Build arguments
 
-- SSO_ENABLED=\<true/false\>
-    - Option to enable or disable Shibboleth SSO process and Apache configuration in container (Default: false)
+- HOSTNAME=\<string\>
+    - Define the hostname that resolves to the iPSK Manager container. (Default: locahost)
+- IDPURL=\<string\>
+    - The entityID of the IDP. (Default: locahost)
+- USERPORT=\<integer\>
+    - TCP port that Apache should use for iPSK Manager user portals. (Default: 443)
+- USERREDIRECTPORT=\<integer\>
+    - TCP port that Apache should use to redirect to the SSL userport. (Default: 80)
+- ADMINPORT=\<integer\>
+    - TCP port that Apache should use for iPSK Manager admin portal. (Default: 8443)
 - MYSQL_ENABLED=\<true/false\>
     - Option to enable or disable MySQL process from running within container (Default: true)
 
@@ -56,27 +64,27 @@ These commands will create two separate Docker volumes, one for the iPSK Manager
 
 ## Apache Configuration
 
-To configure Apache with SSL support within your Docker container, you need to place the necessary SSL certificate files in the designated directory and ensure that the virtual host (vhost) configuration files correctly reference these certificates. Follow these steps to set up Apache with SSL:
-1.	Obtain your CA (Certificate Authority) certificate file, server certificate file, and server private key file.
-2.	Locate the apache-config/ssl directory within your local copy of the repository.
-3.	Copy the CA certificate, server certificate, and server private key files into the apache-config/ssl folder.
-4.	Open the Apache vhost configuration files located in the apache-config/vhosts directory.
-5.	Update the paths to the SSL certificate files within the vhost configuration files to match the filenames of the certificates you placed in the apache-config/ssl folder. Typically, you would adjust the SSLCertificateFile, SSLCertificateKeyFile, and SSLCertificateChainFile (if required) directives.
-6.	If necessary, make any other adjustments to the vhost files to suit your specific setup, such as defining the ServerName, ServerAdmin, or other directives. However, do not change the filenames of the vhost configuration files.
+Apache is automatically configured using the default ports specified in the build arguments above. If you want to change the ports, simply modify the build arguments. SSL is enabled by default, with certificates being automatically generated unless you provide your own. To use custom certificates, place them in the apache-ssl folder before building the image. The files must be named as follows: server.crt (server certificate), server.key (server certificate key), and ca.crt (CA chain certificate).
 
-*Note: It is important to retain the default logging settings in the Apache vhost configuration files. Apache is configured to stream logs to stdout and stderr in this Docker container setup, which aligns with container best practices. Log rotation is not included in the container image, and by streaming logs to stdout and stderr, you allow Docker to handle the logs, which can then be accessed via Docker commands or managed by a separate logging driver or a log management tool.*
+## Shibboleth Configuration (SSO Only)
 
-## Shibboleth Configuration (SSO Enabled Only)
+This Docker container uses Shibboleth as the built-in SAML Service Provider (SP). If you plan to use SAML for authentication with iPSK Manager, define the HOSTNAME and IDPURL during the build process, as some Shibboleth configuration files are generated during the container's initial startup, even if you don't enable SAML. Additionally, you’ll need to place your Identity Provider (IdP) metadata file in the shibboleth folder and name it partner-metadata.xml.
 
-*Please be aware of the importance of the default files located in the shibboleth/config directory. Even if there is no immediate intention to activate Single Sign-On (SSO) capabilities, the existing files in this directory must remain. Deleting these files could disrupt the Docker build process. Making changes to the files is required if you are using SSO for iPSK Manager.*
+By default, signing and encryption certificates and keys are auto-generated when SSO is enabled for the first time. If you prefer not to use auto-generated certificates/keys, you must generate your own and place them in the shibboleth folder before building the image. The files should be named sp-key.pem (SP key) and sp-cert.pem (SP certificate). Currently, the same certificate and key are used for both signing and encryption.
 
-When configuring the Shibboleth Service Provider (SP), it is essential to adhere to the guidelines provided in the official documentation on the Shibboleth website. The configuration process typically involves specifying the identity provider details, setting up attribute mappings, and customizing session handling, among other settings.
+To enable SSO after the container is running, issue the following command from the host machine running the container:
 
-Here are the steps to ensure proper configuration and deployment of Shibboleth SP in your Docker container:
-1.	Place or edit the configuration files required by Shibboleth SP, such as attribute-map.xml, shibboleth2.xml, and any metadata files, into the shibboleth/config folder. These will be copied to the /etc/shibboleth directory within the container during the build process.
-2.	Be mindful that Shibboleth configuration files are not stored in persistent storage. To preserve your Shibboleth configuration across container updates, ensure that all necessary files are maintained within the shibboleth/config directory.
-3.	If sp-cert.pem and sp-key.pem files do not exist in the shibboleth/config directory, a new certificate and key for SAML assertion signing will be automatically generated when the container is first launched.
-4.	It is crucial to understand that access to the iPSK Manager Apache pages will be restricted until the SAML login functionality is fully operational. Once SAML authentication is successfully established, you must install and then log in to the iPSK Manager and navigate to the Platform Configuration section to enable SAML support officially within iPSK Manager.
+```sh
+docker exec -i ipskmanager sh -c '/enablesso.sh'
+```
+
+To disable SSO after the container is running, issue the following command from the host machine running the container:
+
+```sh
+docker exec -i ipskmanager sh -c '/disablesso.sh'
+```
+
+*Please note that once SSO is enabled, access to the iPSK Manager login pages will require SSO authentication, even if SSO has not been fully configured for iPSK Manager. If SSO is not functioning correctly, access will still be restricted. You can disable SSO at any time using the command above to regain access to iPSK Manager and bypass SSO authentication requirements.*
 
 ## Build Docker Image
 
@@ -109,13 +117,13 @@ The build command above will proceed to create the Docker image with the default
 To set MySQL to not run within the container
 
 ```
-docker build -t ipskmanager-image . --build-arg MYSQL_ENABLED=false --no-cache
+docker build --build-arg MYSQL_ENABLED=false --no-cache -t ipskmanager-image .
 ```
 
-To set SSO as enabled and not run MySQL within the container
+To set HOSTNAME and IDPURL as enabled and not run MySQL within the container
 
 ```
-docker build -t ipskmanager-image . --build-arg SSO_ENABLED=true --build-arg MYSQL_ENABLED=false --no-cache
+docker build --build-arg HOSTNAME=ipsk.example.local --build-arg IDPURL='https://idp.example.local/idp-server' --build-arg MYSQL_ENABLED=false --no-cache -t ipskmanager-image .
 ```
 
 ## Running Docker Image
