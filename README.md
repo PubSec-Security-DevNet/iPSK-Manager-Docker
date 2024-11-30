@@ -202,3 +202,14 @@ docker exec -it ipskmanager sed -i 's/USE `<ISE_DB_NAME>`;/USE `ipsk`;/g' /var/w
 docker exec -i ipskmanager sh -c 'mysql -u root < /var/www/iPSK-Manager/schemaupdate-v4.sql'
 ```
 
+### Schema Update v5
+1. Run commands below to change contents of the schemaupdate-v5.sql file to point to the iPSK Manager database used on the Docker Container.
+```sh
+docker exec -it ipskmanager sed -i 's/USE `<ISE_DB_NAME>`;/USE `ipsk`;/g' /var/www/iPSK-Manager/schemaupdate-v5.sql
+docker exec -it ipskmanager sed -i 's/CREATE DEFINER=`<ISE_DB_USERNAME>`@`%` PROCEDURE/CREATE DEFINER=`ipskiseuser`@`%` PROCEDURE/g' /var/www/iPSK-Manager/schemaupdate-v5.sql
+```
+2. Run command below to apply schema change to database
+```sh
+docker exec -i ipskmanager sh -c 'mysql -u root < /var/www/iPSK-Manager/schemaupdate-v5.sql'
+```
+
