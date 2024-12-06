@@ -29,7 +29,7 @@ To clone this GitHub repository to your device using Git, you can follow these s
 3.	Use the git clone command followed by the repository's URL. 
 
 ```
-get clone https://github.com/PubSec-Security-DevNet/iPSK-Manager-Docker.git
+git clone https://github.com/PubSec-Security-DevNet/iPSK-Manager-Docker.git
 ```
 
 Alternatively, you can also download a zip file from the GitHub repository for this project and unzip it in the directory you want to use.
