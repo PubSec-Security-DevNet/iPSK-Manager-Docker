@@ -189,6 +189,57 @@ https://<ipsk-manager-url>:8443
 4.	Continue following the installer prompts. The remaining installation process for iPSK Manager is the same as when it is not containerized.
 5.	Once the installation is complete, you should be redirected to the iPSK Manager login screen.
 
+## Running the expire-endpoints cron script
+As the container does not have cron installed if you wish to use the example cron script for endpoint expire or log truncating you will need to use a cron process outside the container that will run the script within the container.  Before doing this you will need to edit the script.
+
+Steps to edit script.
+
+Run the command below to set the path of iPSK-Manager in the script.
+
+```sh
+docker exec -it ipskmanager sed -i 's|\$ipskManagerPath = "/path/to/iPSK-Manager";|\$ipskManagerPath = "/var/www/iPSK-Manager";|' /var/www/iPSK-Manager/expire-endpoints-cron-example.php.txt
+```
+
+Option Settings:
+
+To enable endpoint expire process
+
+```sh
+docker exec -it ipskmanager sed -i 's|\$expireEndpoints = false;|\$expireEndpoints = true;|'  /var/www/iPSK-Manager/expire-endpoints-cron-example.php.txt
+```
+
+To enable endpoint expire email warning
+
+```sh
+docker exec -it ipskmanager sed -i 's|\$expireEmailNotice = false;|\$expireEmailNotice = true;|'  /var/www/iPSK-Manager/expire-endpoints-cron-example.php.txt
+```
+
+To change number of days before expire warning from default 10 to 20 days as example
+
+```sh
+docker exec -it ipskmanager sed -i 's|\$expireWarningDays = 10;|\$expireWarningDays = 20;|'  /var/www/iPSK-Manager/expire-endpoints-cron-example.php.txt
+```
+
+To enable log truncation
+
+```sh
+docker exec -it ipskmanager sed -i 's|\$truncateLogs = false;|\$truncateLogs = true;|'  /var/www/iPSK-Manager/expire-endpoints-cron-example.php.txt
+```
+
+Once you have finished setting the options you wish to set then enter the command below to copy the script
+
+```sh
+docker exec -it ipskmanager cp /var/www/iPSK-Manager/expire-endpoints-cron-example.php.txt /var/www/iPSK-Manager/expire-endpoints-cron.php
+```
+
+Set the cron process on the container host OS to run the following line at the interval you choose
+
+```sh
+docker exec -i ipskmanager sh -c 'php /var/www/iPSK-Manager/expire-endpoints-cron.php'
+```
+
+Note, the above steps should be performed after every container rebuild in order to run the script in a host OS crontab. 
+
 ## Database Schema Updates (When Required)
 Sometimes schema changes may be included in an update of iPSK Manager. After logging into the admin portal, if you are presented with a database schema update required message, follow the steps below to process the schema update for the particular schema version you need to apply. Remember, schema version changes are not cumulative.
 
