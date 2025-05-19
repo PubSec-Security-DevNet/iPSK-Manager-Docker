@@ -192,7 +192,7 @@ https://<ipsk-manager-url>:8443
 ## Running the expire-endpoints cron script
 As the container does not have cron installed if you wish to use the example cron script for endpoint expire or log truncating you will need to use a cron process outside the container that will run the script within the container.  Before doing this you will need to edit the script.
 
-Steps to edit script.
+Steps to edit script:
 
 Run the command below to set the path of iPSK-Manager in the script.
 
@@ -264,3 +264,14 @@ docker exec -it ipskmanager sed -i 's/CREATE DEFINER=`<ISE_DB_USERNAME>`@`%` PRO
 docker exec -i ipskmanager sh -c 'mysql -u root < /var/www/iPSK-Manager/schemaupdate-v5.sql'
 ```
 
+### Schema Update v6
+1. Run commands below to change contents of the schemaupdate-v6.sql file to point to the iPSK Manager database used on the Docker Container.
+```sh
+docker exec -it ipskmanager sed -i 's/USE `<ISE_DB_NAME>`;/USE `ipsk`;/g' /var/www/iPSK-Manager/schemaupdate-v6.sql
+docker exec -it ipskmanager sed -i 's/CREATE DEFINER=`<IPSK_DB_USERNAME>`@`%` TRIGGER/CREATE DEFINER=`ipskdbuser`@`%` TRIGGER/g' /var/www/iPSK-Manager/schemaupdate-v6.sql
+docker exec -it ipskmanager sed -i 's/CREATE DEFINER=`<ISE_DB_USERNAME>`@`%` PROCEDURE/CREATE DEFINER=`ipskiseuser`@`%` PROCEDURE/g' /var/www/iPSK-Manager/schemaupdate-v6.sql
+```
+2. Run command below to apply schema change to database
+```sh
+docker exec -i ipskmanager sh -c 'mysql -u root < /var/www/iPSK-Manager/schemaupdate-v6.sql'
+```
