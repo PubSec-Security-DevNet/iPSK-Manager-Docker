@@ -241,7 +241,66 @@ docker exec -i ipskmanager sh -c 'php /var/www/iPSK-Manager/expire-endpoints-cro
 Note, the above steps should be performed after every container rebuild in order to run the script in a host OS crontab. 
 
 ## Database Schema Updates (When Required)
-Sometimes schema changes may be included in an update of iPSK Manager. After logging into the admin portal, if you are presented with a database schema update required message, follow the steps below to process the schema update for the particular schema version you need to apply. Remember, schema version changes are not cumulative.
+Sometimes schema changes may be included in an update of iPSK Manager. The admin portal displays a notice when database updates are required. Legacy updates through schema v6 must be applied in order, using the relevant SQL files below. Once the database is at v6, newer builds can apply the bundled migrations in order through **Apply Database Updates** in the admin portal.
+
+### Admin Portal Updates Using a Temporary Database Account (MySQL 8.0)
+
+The Docker build removes its temporary `install` database account after installation. MySQL root remains accessible locally inside the container, so you can use `docker exec` to create a temporary account for the admin portal's migration process and remove it afterward.
+
+These commands apply to the default build with MySQL running **inside the container**, container name `ipskmanager`, database name `ipsk`, and application database host `127.0.0.1`. Substitute your container or database name if different. The temporary account accepts connections from `127.0.0.1` only. For an external database or a different MySQL/MariaDB version, have its administrator supply the appropriate migration account and privileges.
+
+#### Before Applying Updates
+
+- Take a restorable backup of the database, including routines and triggers, and preserve the configuration and encryption key.
+- Deploy the updated application before running its migrations. For the schema v12 update, include the missing-routine recovery fix from iPSK Manager commit `36f5c3e`, or a release containing that fix. Credentials alone will not resolve the older updater's `Missing migration configuration: {{ISE_DB_DEFINER}}` error when a prior failed update removed `iPSK_AttributeFetch`.
+- Confirm internal administrator access, complete any missing legacy updates through v6, and follow the application's [upgrade checklist](https://github.com/CiscoDevNet/iPSK-Manager#keeping-ipsk-manager-up-to-date). Pause enrollment, endpoint changes, and expiration jobs during the update.
+
+#### Create the Temporary Account
+
+Run this command on the **Docker host**:
+
+```sh
+docker exec --user 0 -i ipskmanager mysql --protocol=socket -u root --table <<'SQL'
+CREATE USER 'ipsk_schema_temp'@'127.0.0.1'
+  IDENTIFIED BY RANDOM PASSWORD;
+
+GRANT ALL PRIVILEGES ON `ipsk`.*
+  TO 'ipsk_schema_temp'@'127.0.0.1';
+
+GRANT SHOW_ROUTINE, SET_USER_ID ON *.*
+  TO 'ipsk_schema_temp'@'127.0.0.1';
+SQL
+```
+
+**Copy the generated password displayed in the output.** MySQL generates it, so you do not need to put a password in the shell command.
+
+The account receives privileges on the application database plus the MySQL 8.0 privileges `SHOW_ROUTINE` and `SET_USER_ID`, which allow the updater to read routine definitions for recovery and recreate them under their existing owners. It does not receive `GRANT OPTION`. See the [MySQL 8.0 privilege documentation](https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html) for details. Schema-level privileges alone may not be sufficient, and the normal ISE ODBC account is not a migration administrator.
+
+#### Apply the Schema Updates
+
+1. Sign in to the iPSK Manager admin portal with the verified internal administrator account.
+2. In **Optional migration database credentials**, enter `ipsk_schema_temp` as **DB Username** and the generated password as **DB Password**.
+3. Click **Apply Database Updates** and confirm that the schema reaches the version required by the deployed application (**12** for the November 2026 update).
+4. Complete the application's post-update checks. For schema v12, review external groups marked **Review required** and assign their intended authentication directory before restoring external access.
+
+Keep the normal application credentials in `config.php` unchanged. The temporary credentials are used only for the migration request. If an update fails, resolve the reported problem before retrying; do not manually advance the schema version.
+
+#### Remove the Temporary Account
+
+After the migration request finishes, run this command on the **Docker host**:
+
+```sh
+docker exec --user 0 -i ipskmanager mysql --protocol=socket -u root --table <<'SQL'
+DROP USER IF EXISTS 'ipsk_schema_temp'@'127.0.0.1';
+
+SELECT COUNT(*) AS remaining_accounts
+FROM mysql.user
+WHERE User = 'ipsk_schema_temp'
+  AND Host = '127.0.0.1';
+SQL
+```
+
+`remaining_accounts` should return **0**. Clear the temporary credentials from the browser fields and discard the generated password. Remove the account after an unsuccessful attempt too if you are stopping troubleshooting. You can create it again with a new generated password when ready to retry.
 
 ### Schema Update v4
 1. Run command below to change contents of the schemaupdate-v4.sql file to point to the iPSK Manager database used on the Docker Container.
